@@ -223,7 +223,7 @@ func main() {
 	}
 
 	// 替换 pgtype. 为空字符串
-	newContent := strings.ReplaceAll(string(content), "pgtype.", "")
+	newContent := strings.ReplaceAll(string(content), "pgtype.", "db.")
 
 	// 重写文件
 	err = ioutil.WriteFile("db/params/params.go", []byte(newContent), 0644)
