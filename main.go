@@ -180,6 +180,28 @@ func main() {
 		return
 	}
 
+	// 1. 创建 rows 目录和 rows.go 文件
+	err = os.MkdirAll("db/rows", 0755)
+	if err != nil {
+		fmt.Printf("创建 rows 目录失败: %v\n", err)
+		return
+	}
+
+	// 创建并写入 rows.go 文件头
+	rowsFile, err := os.Create("db/rows/rows.go")
+	if err != nil {
+		fmt.Printf("创建 rows.go 失败: %v\n", err)
+		return
+	}
+	defer rowsFile.Close()
+
+	// 写入包声明和导入语句
+	_, err = rowsFile.WriteString("package r\n\nimport \"encore.app/db\"\n\n")
+	if err != nil {
+		fmt.Printf("写入 rows.go 文件头失败: %v\n", err)
+		return
+	}
+
 	// 3. 读取所有 *.sql.go 文件
 	files, err := filepath.Glob("db/*.sql.go")
 	if err != nil {
@@ -189,6 +211,7 @@ func main() {
 
 	// 用于匹配结构体定义的正则表达式
 	structRegex := regexp.MustCompile(`type\s+\w+Params\s+struct\s*{[^}]+}`)
+	rowStructRegex := regexp.MustCompile(`type\s+\w+Row\s+struct\s*{[^}]+}`)
 
 	for _, file := range files {
 		content, err := ioutil.ReadFile(file)
@@ -197,16 +220,32 @@ func main() {
 			continue
 		}
 
-		// 查找所有匹配的结构体定义
+		// 查找所有匹配的 Params 结构体定义
 		matches := structRegex.FindAll(content, -1)
 		for _, match := range matches {
-			// 将找到的结构体写入params.go
+			// 将找到的结构体写入 params.go
 			_, err = paramsFile.Write(match)
 			if err != nil {
 				fmt.Printf("写入结构体失败: %v\n", err)
 				continue
 			}
 			_, err = paramsFile.WriteString("\n\n")
+			if err != nil {
+				fmt.Printf("写入换行符失败: %v\n", err)
+				continue
+			}
+		}
+
+		// 查找所有匹配的 Row 结构体定义
+		rowMatches := rowStructRegex.FindAll(content, -1)
+		for _, match := range rowMatches {
+			// 将找到的结构体写入 rows.go
+			_, err = rowsFile.Write(match)
+			if err != nil {
+				fmt.Printf("写入 Row 结构体失败: %v\n", err)
+				continue
+			}
+			_, err = rowsFile.WriteString("\n\n")
 			if err != nil {
 				fmt.Printf("写入换行符失败: %v\n", err)
 				continue
@@ -229,6 +268,24 @@ func main() {
 	err = ioutil.WriteFile("db/params/params.go", []byte(newContent), 0644)
 	if err != nil {
 		fmt.Printf("重写params.go失败: %v\n", err)
+		return
+	}
+
+	// 处理 rows.go 文件
+	rowsFile.Seek(0, 0)
+	rowsContent, err := ioutil.ReadAll(rowsFile)
+	if err != nil {
+		fmt.Printf("读取 rows.go 失败: %v\n", err)
+		return
+	}
+
+	// 替换 pgtype. 为空字符串
+	newRowsContent := strings.ReplaceAll(string(rowsContent), "pgtype.", "db.")
+
+	// 重写文件
+	err = ioutil.WriteFile("db/rows/rows.go", []byte(newRowsContent), 0644)
+	if err != nil {
+		fmt.Printf("重写 rows.go 失败: %v\n", err)
 		return
 	}
 
