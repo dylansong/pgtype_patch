@@ -1,6 +1,5 @@
 package r
 
-import "encore.app/db"
 
 type GetAllUsersBasicRow struct {
 	ID             string      `json:"id"`

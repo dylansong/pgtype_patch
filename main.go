@@ -196,7 +196,7 @@ func main() {
 	defer rowsFile.Close()
 
 	// 写入包声明和导入语句
-	_, err = rowsFile.WriteString("package r\n\nimport \"encore.app/db\"\n\n")
+	_, err = rowsFile.WriteString("package r\n\n\n")
 	if err != nil {
 		fmt.Printf("写入 rows.go 文件头失败: %v\n", err)
 		return
