@@ -151,7 +151,9 @@ type XMLCodec struct {
 	Unmarshal func(data []byte, v any) error
 }`
 
-const tsTypeContent = `    export type InfinityModifier = number
+const tsTypeContent = `export namespace pgtype {
+
+   export type InfinityModifier = number
 
     export type Text = string | null
 
@@ -181,7 +183,8 @@ const tsTypeContent = `    export type InfinityModifier = number
 
     export type UUID = string | null
 
-    export type XMLCodec = any | null`
+    export type XMLCodec = any | null
+}`
 
 func main() {
 	// 添加命令行参数解析
@@ -289,42 +292,20 @@ func executePgtypeTask() {
 func executeTypeScriptTask() {
 	filePath := "src/lib/encore/generated.ts"
 	
+	// 读取文件内容
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("读取文件失败: %v\n", err)
 		return
 	}
 
-	// 使用更复杂的逻辑来处理嵌套的花括号
-	startPattern := regexp.MustCompile(`export\s+namespace\s+pgtype\s*\{`)
-	contentStr := string(content)
-	startIdx := startPattern.FindStringIndex(contentStr)
-	
-	if startIdx == nil {
-		fmt.Println("未找到 pgtype namespace")
-		return
-	}
+	// 替换 namespace 名称
+	contentStr := strings.ReplaceAll(string(content), 
+		"export namespace pgtype", 
+		"export namespace pgtypeBak")
 
-	// 从找到的位置开始计算花括号的配对
-	braceCount := 0
-	endIdx := startIdx[1]
-	
-	for i := startIdx[1]; i < len(contentStr); i++ {
-		if contentStr[i] == '{' {
-			braceCount++
-		} else if contentStr[i] == '}' {
-			braceCount--
-			if braceCount == 0 {
-				endIdx = i + 1
-				break
-			}
-		}
-	}
-
-	// 构建新的内容
-	newContent := contentStr[:startIdx[0]] +
-		fmt.Sprintf("export namespace pgtype {\n%s\n}", tsTypeContent) +
-		contentStr[endIdx:]
+	// 在文件末尾添加新的 pgtype namespace
+	newContent := contentStr + "\n\n" + tsTypeContent
 
 	// 写回文件
 	err = ioutil.WriteFile(filePath, []byte(newContent), 0644)
