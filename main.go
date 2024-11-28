@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -150,7 +151,56 @@ type XMLCodec struct {
 	Unmarshal func(data []byte, v any) error
 }`
 
+const tsTypeContent = `    export type InfinityModifier = number
+
+    export type Text = string
+
+    export type Timestamp = string
+
+    export type Time = number
+
+    export type Timestamptz = string
+
+    export type Bool = boolean
+
+    export type Date = string
+
+    export type Float4 = number
+
+    export type Float8 = number
+
+    export type Int2 = number
+
+    export type JSONCodec = any
+
+    export type JSONBCodec = any
+
+    export type Interval = number
+
+    export type Uint32 = number
+
+    export type UUID = string
+
+    export type XMLCodec = any`
+
 func main() {
+	// 添加命令行参数解析
+	command := flag.String("cmd", "pgtype", "要执行的命令: pgtype 或 ts")
+	flag.Parse()
+
+	switch *command {
+	case "pgtype":
+		executePgtypeTask()
+	case "ts":
+		executeTypeScriptTask()
+	default:
+		fmt.Printf("未知的命令: %s\n", *command)
+		fmt.Println("可用命令: pgtype, ts")
+	}
+}
+
+// 将原来的 main 函数内容移到这个新函数中
+func executePgtypeTask() {
 	// 1. 创建 pgtype.go 文件
 	err := ioutil.WriteFile("db/pgtype.go", []byte(pgtypeContent), 0644)
 	if err != nil {
@@ -233,4 +283,31 @@ func main() {
 	}
 
 	fmt.Println("处理完成！")
+}
+
+// 新增的 TypeScript 相关任务函数
+func executeTypeScriptTask() {
+	filePath := "src/lib/encore/generated.ts"
+	
+	// 读取文件内容
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Printf("读取文件失败: %v\n", err)
+		return
+	}
+
+	// 使用正则表达式匹配 pgtype 命名空间块
+	re := regexp.MustCompile(`export namespace pgtype \{[\s\S]*?\}`)
+	
+	// 替换内容
+	newContent := re.ReplaceAllString(string(content), fmt.Sprintf("export namespace pgtype {\n%s\n}", tsTypeContent))
+
+	// 写回文件
+	err = ioutil.WriteFile(filePath, []byte(newContent), 0644)
+	if err != nil {
+		fmt.Printf("写入文件失败: %v\n", err)
+		return
+	}
+
+	fmt.Println("TypeScript 类型定义更新完成！")
 }
