@@ -304,6 +304,8 @@ func main() {
 		newModelsContent := strings.ReplaceAll(string(modelsContent), "pgtype.", "db.")
 			// 替换 package db 为 package r
 	newModelsContent = strings.Replace(newModelsContent, "package db", "package r", 1)
+		// 删除 pgtype 导入
+		newModelsContent = regexp.MustCompile(`\s*"github\.com/jackc/pgx/v5/pgtype"\n`).ReplaceAllString(newModelsContent, "")
 	
 		// 写入新文件
 		err = ioutil.WriteFile(modelsDst, []byte(newModelsContent), 0644)
