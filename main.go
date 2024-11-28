@@ -302,6 +302,8 @@ func main() {
 	
 		// 替换 pgtype. 为 db.
 		newModelsContent := strings.ReplaceAll(string(modelsContent), "pgtype.", "db.")
+			// 替换 package db 为 package r
+	newModelsContent = strings.Replace(newModelsContent, "package db", "package r", 1)
 	
 		// 写入新文件
 		err = ioutil.WriteFile(modelsDst, []byte(newModelsContent), 0644)
