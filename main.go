@@ -153,35 +153,35 @@ type XMLCodec struct {
 
 const tsTypeContent = `    export type InfinityModifier = number
 
-    export type Text = string
+    export type Text = string | null
 
-    export type Timestamp = string
+    export type Timestamp = string | null
 
-    export type Time = number
+    export type Time = number | null
 
-    export type Timestamptz = string
+    export type Timestamptz = string | null
 
-    export type Bool = boolean
+    export type Bool = boolean | null
 
-    export type Date = string
+    export type Date = string | null
 
-    export type Float4 = number
+    export type Float4 = number | null
 
-    export type Float8 = number
+    export type Float8 = number | null
 
-    export type Int2 = number
+    export type Int2 = number | null	
 
-    export type JSONCodec = any
+    export type JSONCodec = any | null
 
-    export type JSONBCodec = any
+    export type JSONBCodec = any | null
 
-    export type Interval = number
+    export type Interval = number | null
 
-    export type Uint32 = number
+    export type Uint32 = number | null
 
-    export type UUID = string
+    export type UUID = string | null
 
-    export type XMLCodec = any`
+    export type XMLCodec = any | null`
 
 func main() {
 	// 添加命令行参数解析
