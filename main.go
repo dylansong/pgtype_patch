@@ -180,28 +180,6 @@ func main() {
 		return
 	}
 
-	// 1. 创建 rows 目录和 rows.go 文件
-	err = os.MkdirAll("db/rows", 0755)
-	if err != nil {
-		fmt.Printf("创建 rows 目录失败: %v\n", err)
-		return
-	}
-
-	// 创建并写入 rows.go 文件头
-	rowsFile, err := os.Create("db/rows/rows.go")
-	if err != nil {
-		fmt.Printf("创建 rows.go 失败: %v\n", err)
-		return
-	}
-	defer rowsFile.Close()
-
-	// 写入包声明和导入语句
-	_, err = rowsFile.WriteString("package r\n\n\n")
-	if err != nil {
-		fmt.Printf("写入 rows.go 文件头失败: %v\n", err)
-		return
-	}
-
 	// 3. 读取所有 *.sql.go 文件
 	files, err := filepath.Glob("db/*.sql.go")
 	if err != nil {
@@ -209,9 +187,8 @@ func main() {
 		return
 	}
 
-	// 用于匹配结构体定义的正则表达式
+	// 只保留 Params 结构体的正则表达式
 	structRegex := regexp.MustCompile(`type\s+\w+Params\s+struct\s*{[^}]+}`)
-	rowStructRegex := regexp.MustCompile(`type\s+\w+Row\s+struct\s*{[^}]+}`)
 
 	for _, file := range files {
 		content, err := ioutil.ReadFile(file)
@@ -220,7 +197,7 @@ func main() {
 			continue
 		}
 
-		// 查找所有匹配的 Params 结构体定义
+		// 只查找 Params 结构体定义
 		matches := structRegex.FindAll(content, -1)
 		for _, match := range matches {
 			// 将找到的结构体写入 params.go
@@ -235,25 +212,9 @@ func main() {
 				continue
 			}
 		}
-
-		// 查找所有匹配的 Row 结构体定义
-		rowMatches := rowStructRegex.FindAll(content, -1)
-		for _, match := range rowMatches {
-			// 将找到的结构体写入 rows.go
-			_, err = rowsFile.Write(match)
-			if err != nil {
-				fmt.Printf("写入 Row 结构体失败: %v\n", err)
-				continue
-			}
-			_, err = rowsFile.WriteString("\n\n")
-			if err != nil {
-				fmt.Printf("写入换行符失败: %v\n", err)
-				continue
-			}
-		}
 	}
 
-	// 4. 读取整个文件内容
+	// 4. 读取整个文件内容并处理 params.go
 	paramsFile.Seek(0, 0)
 	content, err := ioutil.ReadAll(paramsFile)
 	if err != nil {
@@ -268,81 +229,6 @@ func main() {
 	err = ioutil.WriteFile("db/params/params.go", []byte(newContent), 0644)
 	if err != nil {
 		fmt.Printf("重写params.go失败: %v\n", err)
-		return
-	}
-
-	// 处理 rows.go 文件
-	rowsFile.Seek(0, 0)
-	rowsContent, err := ioutil.ReadAll(rowsFile)
-	if err != nil {
-		fmt.Printf("读取 rows.go 失败: %v\n", err)
-		return
-	}
-
-	// 定义类型替换映射
-	typeReplacements := map[string]string{
-		"pgtype.Text":        "string",
-		"pgtype.UUID":        "[16]byte",
-		"pgtype.Uint32":      "uint32",
-		"pgtype.Timestamptz": "time.Time",
-		"pgtype.Timestamp ":  "time.Time",
-		"pgtype.Time ":       "int64",
-		"pgtype.Int2":        "int16",
-		"pgtype.Float8":      "float64",
-		"pgtype.Float4":      "float32",
-		"pgtype.Date":        "time.Time",
-		"pgtype.Bool":        "bool",
-		"pgtype.Bits":        "[]byte",
-	}
-
-	// 修改替换逻辑
-	newRowsContent := string(rowsContent)
-	// 使用正则表达式进行更精确的替换
-	newRowsContent = regexp.MustCompile(`pgtype\.Timestamptz\b`).ReplaceAllString(newRowsContent, "time.Time")
-	newRowsContent = regexp.MustCompile(`pgtype\.Timestamp\b`).ReplaceAllString(newRowsContent, "time.Time")
-	newRowsContent = regexp.MustCompile(`pgtype\.Time\b`).ReplaceAllString(newRowsContent, "int64")
-	
-	// 执行其他类型替换
-	for old, new := range typeReplacements {
-		if !strings.Contains(old, "Timestamp") && !strings.Contains(old, "Time") {
-			newRowsContent = strings.ReplaceAll(newRowsContent, old, new)
-		}
-	}
-
-	// 重写文件
-	err = ioutil.WriteFile("db/rows/rows.go", []byte(newRowsContent), 0644)
-	if err != nil {
-		fmt.Printf("重写 rows.go 失败: %v\n", err)
-		return
-	}
-
-	// 复制 models.go 到 db/rows 目录
-	modelsSrc := "db/models.go"
-	modelsDst := "db/rows/models.go"
-	
-	// 读取源文件内容
-	modelsContent, err := ioutil.ReadFile(modelsSrc)
-	if err != nil {
-		fmt.Printf("读取 models.go 失败: %v\n", err)
-		return
-	}
-
-	// 替换 package db 为 package r
-	newModelsContent := strings.Replace(string(modelsContent), "package db", "package r", 1)
-	// 删除 pgtype 导入
-	newModelsContent = regexp.MustCompile(`\s*"github\.com/jackc/pgx/v5/pgtype"\n`).ReplaceAllString(newModelsContent,  "\n    \"time\"\n")
-
-
-
-	// 执行所有类型替换
-	for old, new := range typeReplacements {
-		newModelsContent = strings.ReplaceAll(newModelsContent, old, new)
-	}
-
-	// 写入新文件
-	err = ioutil.WriteFile(modelsDst, []byte(newModelsContent), 0644)
-	if err != nil {
-		fmt.Printf("写入 db/rows/models.go 失败: %v\n", err)
 		return
 	}
 
