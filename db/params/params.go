@@ -18,3 +18,8 @@ type CreateUserWithZillowUsernameParams struct {
 	ProviderID     string      `json:"provider_id"`
 }
 
+type UpdateUserZillowUsernameParams struct {
+	ZillowUsername db.Text `json:"zillow_username"`
+	ID             string      `json:"id"`
+}
+

@@ -278,6 +278,12 @@ func (q *Queries) GetUserWithSpecificRole(ctx context.Context, role Role) (User,
 	return i, err
 }
 
+
+type UpdateUserZillowUsernameParams struct {
+	ZillowUsername pgtype.Text `json:"zillow_username"`
+	ID             string      `json:"id"`
+}
+
 const getUsersWithPaidRoles = `-- name: GetUsersWithPaidRoles :many
 SELECT id, first_name, last_name, zillow_username, description, avatar, phone, mobile, email, user_cover_pic, user_cover_pic_cut, instant_voice_id, role, role_expired_at, country, province, city, token, language, secondary_language, provider_id, created_at, updated_at FROM users 
 WHERE role IN ('pro', 'ultra')

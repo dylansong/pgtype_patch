@@ -279,8 +279,35 @@ func main() {
 		return
 	}
 
-	// 替换 pgtype. 为空字符串
-	newRowsContent := strings.ReplaceAll(string(rowsContent), "pgtype.", "db.")
+	// 定义类型替换映射
+	typeReplacements := map[string]string{
+		"pgtype.Text":        "string",
+		"pgtype.UUID":        "[16]byte",
+		"pgtype.Uint32":      "uint32",
+		"pgtype.Timestamptz": "time.Time",
+		"pgtype.Timestamp ":  "time.Time",
+		"pgtype.Time ":       "int64",
+		"pgtype.Int2":        "int16",
+		"pgtype.Float8":      "float64",
+		"pgtype.Float4":      "float32",
+		"pgtype.Date":        "time.Time",
+		"pgtype.Bool":        "bool",
+		"pgtype.Bits":        "[]byte",
+	}
+
+	// 修改替换逻辑
+	newRowsContent := string(rowsContent)
+	// 使用正则表达式进行更精确的替换
+	newRowsContent = regexp.MustCompile(`pgtype\.Timestamptz\b`).ReplaceAllString(newRowsContent, "time.Time")
+	newRowsContent = regexp.MustCompile(`pgtype\.Timestamp\b`).ReplaceAllString(newRowsContent, "time.Time")
+	newRowsContent = regexp.MustCompile(`pgtype\.Time\b`).ReplaceAllString(newRowsContent, "int64")
+	
+	// 执行其他类型替换
+	for old, new := range typeReplacements {
+		if !strings.Contains(old, "Timestamp") && !strings.Contains(old, "Time") {
+			newRowsContent = strings.ReplaceAll(newRowsContent, old, new)
+		}
+	}
 
 	// 重写文件
 	err = ioutil.WriteFile("db/rows/rows.go", []byte(newRowsContent), 0644)
@@ -289,30 +316,35 @@ func main() {
 		return
 	}
 
-		// 复制 models.go 到 db/rows 目录
-		modelsSrc := "db/models.go"
-		modelsDst := "db/rows/models.go"
-		
-		// 读取源文件内容
-		modelsContent, err := ioutil.ReadFile(modelsSrc)
-		if err != nil {
-			fmt.Printf("读取 models.go 失败: %v\n", err)
-			return
-		}
+	// 复制 models.go 到 db/rows 目录
+	modelsSrc := "db/models.go"
+	modelsDst := "db/rows/models.go"
 	
-		// 替换 pgtype. 为 db.
-		newModelsContent := strings.ReplaceAll(string(modelsContent), "pgtype.", "db.")
-			// 替换 package db 为 package r
-	newModelsContent = strings.Replace(newModelsContent, "package db", "package r", 1)
-		// 删除 pgtype 导入
-		newModelsContent = regexp.MustCompile(`\s*"github\.com/jackc/pgx/v5/pgtype"\n`).ReplaceAllString(newModelsContent, "")
-	
-		// 写入新文件
-		err = ioutil.WriteFile(modelsDst, []byte(newModelsContent), 0644)
-		if err != nil {
-			fmt.Printf("写入 db/rows/models.go 失败: %v\n", err)
-			return
-		}
+	// 读取源文件内容
+	modelsContent, err := ioutil.ReadFile(modelsSrc)
+	if err != nil {
+		fmt.Printf("读取 models.go 失败: %v\n", err)
+		return
+	}
+
+	// 替换 package db 为 package r
+	newModelsContent := strings.Replace(string(modelsContent), "package db", "package r", 1)
+	// 删除 pgtype 导入
+	newModelsContent = regexp.MustCompile(`\s*"github\.com/jackc/pgx/v5/pgtype"\n`).ReplaceAllString(newModelsContent,  "\n    \"time\"\n")
+
+
+
+	// 执行所有类型替换
+	for old, new := range typeReplacements {
+		newModelsContent = strings.ReplaceAll(newModelsContent, old, new)
+	}
+
+	// 写入新文件
+	err = ioutil.WriteFile(modelsDst, []byte(newModelsContent), 0644)
+	if err != nil {
+		fmt.Printf("写入 db/rows/models.go 失败: %v\n", err)
+		return
+	}
 
 	fmt.Println("处理完成！")
 }
