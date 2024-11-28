@@ -289,18 +289,42 @@ func executePgtypeTask() {
 func executeTypeScriptTask() {
 	filePath := "src/lib/encore/generated.ts"
 	
-	// 读取文件内容
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("读取文件失败: %v\n", err)
 		return
 	}
 
-	// 使用正则表达式匹配 pgtype 命名空间块
-	re := regexp.MustCompile(`export namespace pgtype \{[\s\S]*?\}`)
+	// 使用更复杂的逻辑来处理嵌套的花括号
+	startPattern := regexp.MustCompile(`export\s+namespace\s+pgtype\s*\{`)
+	contentStr := string(content)
+	startIdx := startPattern.FindStringIndex(contentStr)
 	
-	// 替换内容
-	newContent := re.ReplaceAllString(string(content), fmt.Sprintf("export namespace pgtype {\n%s\n}", tsTypeContent))
+	if startIdx == nil {
+		fmt.Println("未找到 pgtype namespace")
+		return
+	}
+
+	// 从找到的位置开始计算花括号的配对
+	braceCount := 0
+	endIdx := startIdx[1]
+	
+	for i := startIdx[1]; i < len(contentStr); i++ {
+		if contentStr[i] == '{' {
+			braceCount++
+		} else if contentStr[i] == '}' {
+			braceCount--
+			if braceCount == 0 {
+				endIdx = i + 1
+				break
+			}
+		}
+	}
+
+	// 构建新的内容
+	newContent := contentStr[:startIdx[0]] +
+		fmt.Sprintf("export namespace pgtype {\n%s\n}", tsTypeContent) +
+		contentStr[endIdx:]
 
 	// 写回文件
 	err = ioutil.WriteFile(filePath, []byte(newContent), 0644)
