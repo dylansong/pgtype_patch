@@ -289,5 +289,26 @@ func main() {
 		return
 	}
 
+		// 复制 models.go 到 db/rows 目录
+		modelsSrc := "db/models.go"
+		modelsDst := "db/rows/models.go"
+		
+		// 读取源文件内容
+		modelsContent, err := ioutil.ReadFile(modelsSrc)
+		if err != nil {
+			fmt.Printf("读取 models.go 失败: %v\n", err)
+			return
+		}
+	
+		// 替换 pgtype. 为 db.
+		newModelsContent := strings.ReplaceAll(string(modelsContent), "pgtype.", "db.")
+	
+		// 写入新文件
+		err = ioutil.WriteFile(modelsDst, []byte(newModelsContent), 0644)
+		if err != nil {
+			fmt.Printf("写入 db/rows/models.go 失败: %v\n", err)
+			return
+		}
+
 	fmt.Println("处理完成！")
 }
