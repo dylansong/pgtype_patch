@@ -67,6 +67,11 @@ type Int2 struct {
 	Valid bool
 }
 
+type Int4 struct {
+	Int32 int32
+	Valid bool
+}
+
 type Interval struct {
 	Microseconds int64
 	Days         int32
